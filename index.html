@@ -1,0 +1,1884 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Learning Hub</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #00ffff 0%, #00cccc 50%, #008b8b 100%);
+        }
+        
+        .dark-gradient {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        }
+        
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: #1a1a1a;
+            border: 1px solid #00ffff33;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 255, 255, 0.2);
+            border-color: #00ffff66;
+        }
+        
+        /* Loading Screen Styles */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeOut 0.5s ease 2.5s forwards;
+        }
+        
+        .loader-logo {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .loader-text {
+            color: #00ffff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            animation: glow 1.5s ease-in-out infinite;
+        }
+        
+        .loader-bar {
+            width: 300px;
+            height: 8px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #00ffff44;
+        }
+        
+        .loader-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #00cccc, #00ffff);
+            background-size: 200% 100%;
+            animation: loadProgress 2.5s ease forwards, shimmer 1s linear infinite;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+        
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes loadProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Calculator Loading Overlay */
+        .calculator-loading {
+            position: relative;
+            pointer-events: none;
+        }
+        
+        .calculator-loading::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.9);
+            z-index: 100;
+            border-radius: 1rem;
+        }
+        
+        .calculator-loading::after {
+            content: '⚙️';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            z-index: 101;
+            animation: spin 1s linear infinite;
+        }
+        
+        .engine-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-radius: 1rem;
+            animation: fadeInOut 5s ease forwards;
+        }
+        
+        .engine-icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            animation: spin 2s linear infinite;
+        }
+        
+        .engine-text {
+            color: #00ffff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+        
+        .engine-progress {
+            width: 250px;
+            height: 6px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #00ffff44;
+        }
+        
+        .engine-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #00cccc);
+            animation: engineProgress 4.5s ease forwards;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+        }
+        
+        .calculation-steps {
+            margin-top: 1rem;
+            color: #00ffff;
+            font-size: 0.9rem;
+            opacity: 0;
+            animation: fadeInSteps 0.5s ease 1s forwards;
+        }
+        
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        @keyframes engineProgress {
+            0% { width: 0%; }
+            20% { width: 25%; }
+            40% { width: 50%; }
+            60% { width: 75%; }
+            100% { width: 100%; }
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        
+        @keyframes fadeInSteps {
+            to { opacity: 1; }
+        }
+        
+        .input-field {
+            transition: all 0.3s ease;
+            background: #0f0f0f;
+            border: 2px solid #00ffff44;
+            color: #ffffff;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            background: #000000;
+        }
+        
+        .input-field::placeholder {
+            color: #16cf2f;
+        }
+        
+        .btn-primary {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.4);
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        .result-box {
+            animation: fadeIn 0.5s ease, glow 2s ease-in-out infinite alternate;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 1px solid #00ffff44;
+        }
+        
+        .aqua-text {
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .aqua-glow {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(0, 255, 255, 0.2); }
+            to { box-shadow: 0 0 20px rgba(0, 255, 255, 0.4); }
+        }
+        
+        .neon-border {
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            border: 1px solid #00ffff44;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: #00ffff;
+            transform: scale(1.02);
+        }
+        
+        .bond-type-btn, .stock-method-btn {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 2px solid #00ffff44;
+            color: #cccccc;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .bond-type-btn:hover, .stock-method-btn:hover {
+            border-color: #00ffff;
+            color: #00ffff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+        }
+        
+        .bond-type-btn.active, .stock-method-btn.active {
+            background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
+            color: #000000;
+            border-color: #00ffff;
+            box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
+        }
+
+        /* Existing styles... */
+
+/* --- MOBILE SPECIFIC FIXES --- */
+@media (max-width: 1024px) {
+    header {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+        text-align: center;
+    }
+
+    #main-title {
+        font-size: 2.5rem !important;
+    }
+
+    #live-engine {
+        position: relative !important; /* Stop floating */
+        top: 0 !important;
+        right: 0 !important;
+        margin: 20px auto !important;
+        width: 100% !important;
+        max-width: 340px;
+        min-width: unset !important;
+    }
+
+    .grid-cols-2, .grid-cols-4, .md\:grid-cols-2 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Keep small buttons in 2 columns on mobile instead of stacking to 1 */
+    .bond-type-btn-container, .theme-btn-container {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+    }
+}
+
+/* Better Touch Targets */
+.btn-primary, .input-field, .theme-btn, .bond-type-btn, .stock-method-btn {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+#working-overlay .engine-icon {
+    font-size: 80px;
+    display: inline-block;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.engine-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #00ffff, #008b8b);
+    box-shadow: 0 0 15px #00ffff;
+    transition: width 0.1s linear;
+}
+#info-overlay {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Ensure the button is visible against the header */
+#menu-toggle {
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+}
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full"><!-- Initial Loading Screen -->
+  <div id="loading-screen">
+   <div class="loader-logo">
+    💰
+   </div>
+   <div class="loader-text">
+    Finance Learning Hub
+   </div>
+   <div class="loader-bar">
+    <div class="loader-progress"></div>
+   </div>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 theme-btn-container">
+   </div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bond-type-btn-container">
+   </div>
+   <audio id="bg-music" loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+</audio>
+
+<button id="music-toggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; background: rgba(0,255,255,0.2); border: 1px solid #00ffff; color: #00ffff; border-radius: 50%; width: 50px; height: 50px; cursor: pointer;">
+    🔇
+</button><div id="info-overlay" class="fixed inset-0 z-[150] bg-black/95 backdrop-blur-md hidden flex-col items-center justify-center p-6 overflow-y-auto">
+    <button id="close-menu" class="absolute top-8 right-8 text-cyan-400 text-4xl">&times;</button>
+    
+    <div class="max-w-2xl w-full space-y-8">
+        <div class="card p-8 rounded-2xl border-l-4 border-cyan-400">
+            <h2 class="text-3xl font-bold aqua-text mb-4">🚀 Project Introduction</h2>
+            <p class="text-gray-300 text-lg leading-relaxed">
+                Welcome to <strong>Rohit's Finance Solver</strong>. Finance is use to mean money used to run a business or to carry on an activity it is also refers to an acadmic discipline or subject. 
+            </p>
+        </div>
+
+        <div class="card p-8 rounded-2xl border-l-4 border-cyan-600">
+            <h2 class="text-3xl font-bold aqua-text mb-4">📝 Finance Essentials</h2>
+            <ul class="text-gray-300 space-y-4">
+                <li>💎 <strong class="text-cyan-400">Liquidity:</strong> How quickly you can turn assets into cash.</li>
+                <li>📊 <strong class="text-cyan-400">Risk/Reward:</strong> Higher potential returns usually mean higher risks.</li>
+                <li>📉 <strong class="text-cyan-400">Diversification:</strong> Never put all your eggs in one basket!</li>
+            </ul>
+        </div>
+    </div>
+</div>
+  <div id="app" class="w-full h-full overflow-auto">
+    <button id="menu-toggle" class="fixed top-5 left-5 z-[100] w-12 h-12 bg-black/50 border-2 border-cyan-400 rounded-full flex flex-col items-center justify-center gap-1 hover:bg-cyan-400 group transition-all">
+    <span class="w-6 h-0.5 bg-cyan-400 group-hover:bg-black transition-colors"></span>
+    <span class="w-6 h-0.5 bg-cyan-400 group-hover:bg-black transition-colors"></span>
+    <span class="w-6 h-0.5 bg-cyan-400 group-hover:bg-black transition-colors"></span>
+</button><!-- Header -->
+   <header class="gradient-bg text-white py-12" style="position: relative;">
+    <div class="max-w-6xl mx-auto px-6">
+     <h1 id="main-title" class="text-5xl font-bold mb-3">ROHIT's FINANCE SOLVER</h1>
+     <p id="subtitle" class="text-xl opacity-90">Master Break-Even Analysis &amp; Stock Valuation</p>
+    </div><!-- Live Engine Display - Top Right -->
+    <div id="live-engine" style="position: absolute; top: 20px; right: 20px; background: rgba(10, 10, 10, 0.95); border: 2px solid #00ffff; border-radius: 16px; padding: 20px; min-width: 300px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);"><!-- Engine Structure SVG -->
+     <div style="text-align: center; margin-bottom: 15px;">
+      <svg id="engine-structure" width="260" height="140" viewbox="0 0 260 140" style="filter: drop-shadow(0 0 10px #00ffff);"><!-- Engine Block --> <rect x="50" y="60" width="160" height="60" fill="#333333" stroke="#00ffff" stroke-width="2" rx="4" /> <rect x="55" y="65" width="150" height="50" fill="#1a1a1a" stroke="#00cccc" stroke-width="1" /> <!-- Cylinder Heads --> <rect x="70" y="50" width="30" height="15" fill="#555555" stroke="#00ffff" stroke-width="1.5" rx="2" /> <rect x="115" y="50" width="30" height="15" fill="#555555" stroke="#00ffff" stroke-width="1.5" rx="2" /> <rect x="160" y="50" width="30" height="15" fill="#555555" stroke="#00ffff" stroke-width="1.5" rx="2" /> <!-- Pistons (animated) --> <g id="piston-1">
+        <rect x="75" y="30" width="20" height="25" fill="#00ffff" stroke="#00cccc" stroke-width="2" rx="2" />
+        <rect x="75" y="52" width="20" height="8" fill="#666666" stroke="#00ffff" stroke-width="1" />
+        <line x1="85" y1="30" x2="85" y2="25" stroke="#00ffff" stroke-width="3" />
+        <circle cx="85" cy="23" r="3" fill="#00ffff" />
+       </g> <g id="piston-2">
+        <rect x="120" y="35" width="20" height="25" fill="#00ffff" stroke="#00cccc" stroke-width="2" rx="2" />
+        <rect x="120" y="57" width="20" height="8" fill="#666666" stroke="#00ffff" stroke-width="1" />
+        <line x1="130" y1="35" x2="130" y2="30" stroke="#00ffff" stroke-width="3" />
+        <circle cx="130" cy="28" r="3" fill="#00ffff" />
+       </g> <g id="piston-3">
+        <rect x="165" y="32" width="20" height="25" fill="#00ffff" stroke="#00cccc" stroke-width="2" rx="2" />
+        <rect x="165" y="54" width="20" height="8" fill="#666666" stroke="#00ffff" stroke-width="1" />
+        <line x1="175" y1="32" x2="175" y2="27" stroke="#00ffff" stroke-width="3" />
+        <circle cx="175" cy="25" r="3" fill="#00ffff" />
+       </g> <!-- Crankshaft --> <ellipse cx="130" cy="90" rx="70" ry="8" fill="#444444" stroke="#00ffff" stroke-width="2" /> <circle cx="85" cy="90" r="6" fill="#00ffff" stroke="#00cccc" stroke-width="2" /> <circle cx="130" cy="90" r="6" fill="#00ffff" stroke="#00cccc" stroke-width="2" /> <circle cx="175" cy="90" r="6" fill="#00ffff" stroke="#00cccc" stroke-width="2" /> <!-- Oil Pan --> <path d="M 60 120 L 50 125 L 50 130 L 210 130 L 210 125 L 200 120 Z" fill="#222222" stroke="#00ffff" stroke-width="2" /> <!-- Intake Manifold --> <rect x="40" y="45" width="15" height="20" fill="#555555" stroke="#00ffff" stroke-width="1.5" rx="2" /> <polygon points="35,50 40,45 40,65 35,60" fill="#666666" stroke="#00ffff" stroke-width="1" /> <!-- Exhaust Manifold --> <rect x="205" y="45" width="15" height="20" fill="#ff6b6b" stroke="#ff4444" stroke-width="1.5" rx="2" /> <polygon points="225,50 220,45 220,65 225,60" fill="#ff8888" stroke="#ff4444" stroke-width="1" /> <!-- Spark Plugs --> <line x1="85" y1="20" x2="85" y2="15" stroke="#ffff00" stroke-width="2" /> <circle cx="85" cy="13" r="2" fill="#ffff00" /> <line x1="130" y1="25" x2="130" y2="20" stroke="#ffff00" stroke-width="2" /> <circle cx="130" cy="18" r="2" fill="#ffff00" /> <line x1="175" y1="22" x2="175" y2="17" stroke="#ffff00" stroke-width="2" /> <circle cx="175" cy="15" r="2" fill="#ffff00" /> <!-- Turbo --> <circle cx="230" cy="55" r="12" fill="#333333" stroke="#00ffff" stroke-width="2" /> <circle id="turbo-fan" cx="230" cy="55" r="8" fill="none" stroke="#00ffff" stroke-width="2" /> <line x1="230" y1="47" x2="230" y2="63" stroke="#00ffff" stroke-width="2" /> <line x1="222" y1="55" x2="238" y2="55" stroke="#00ffff" stroke-width="2" /> <!-- Labels --> <text x="130" y="10" fill="#00ffff" font-size="8" text-anchor="middle" font-weight="bold">
+        V6 ENGINE
+       </text>
+      </svg>
+     </div><!-- Engine Stats -->
+     <div style="color: #00ffff; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="color: #888;">RPM:</span> <span id="engine-rpm" style="font-weight: bold; color: #00ffff;">800</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="color: #888;">Power:</span> <span id="engine-power" style="font-weight: bold; color: #00ffff;">120 HP</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="color: #888;">Temp:</span> <span id="engine-temp" style="font-weight: bold; color: #ff6b6b;">90°C</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span style="color: #888;">Boost:</span> <span id="engine-boost" style="font-weight: bold; color: #00ff88;">1.0 bar</span>
+      </div><!-- RPM Progress Bar -->
+      <div style="background: #1a1a1a; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 1px solid #00ffff44;">
+       <div id="rpm-bar" style="height: 100%; width: 11%; background: linear-gradient(90deg, #00ffff, #00ff88); transition: width 0.3s, box-shadow 0.3s;"></div>
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #888; margin-top: 5px;">
+       ⚙️ <span id="engine-status">IDLE</span>
+      </div>
+     </div>
+    </div>
+   </header><!-- Theme Changer & Font Size Control -->
+   <div style="max-width: 1280px; margin: 0 auto; padding: 20px 24px;">
+    <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00ffff44; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0, 255, 255, 0.2);">
+     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center;"><!-- Theme Changer -->
+      <div>
+       <h3 style="color: #00ffff; font-size: 18px; font-weight: bold; margin-bottom: 16px; display: flex; align-items: center;">🎨 Theme Changer</h3>
+       <div style="display: flex; gap: 12px; flex-wrap: wrap;"><button class="theme-btn" data-theme="aqua" style="background: linear-gradient(135deg, #00ffff, #00cccc); color: #000; padding: 12px 24px; border-radius: 8px; font-weight: 600; border: 2px solid #00ffff; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);"> 🔵 Aqua </button> <button class="theme-btn" data-theme="purple" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: #a855f7; padding: 12px 24px; border-radius: 8px; font-weight: 600; border: 2px solid #a855f744; cursor: pointer; transition: all 0.3s;"> 🟣 Purple </button> <button class="theme-btn" data-theme="orange" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: #ff8800; padding: 12px 24px; border-radius: 8px; font-weight: 600; border: 2px solid #ff880044; cursor: pointer; transition: all 0.3s;"> 🟠 Orange </button> <button class="theme-btn" data-theme="green" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: #10b981; padding: 12px 24px; border-radius: 8px; font-weight: 600; border: 2px solid #10b98144; cursor: pointer; transition: all 0.3s;"> 🟢 Green </button> <button class="theme-btn" data-theme="pink" style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: #ec4899; padding: 12px 24px; border-radius: 8px; font-weight: 600; border: 2px solid #ec489944; cursor: pointer; transition: all 0.3s;"> 🩷 Pink </button>
+       </div>
+      </div><!-- Font Size Control -->
+      <div>
+       <h3 style="color: #00ffff; font-size: 18px; font-weight: bold; margin-bottom: 16px; display: flex; align-items: center;">📝 Font Size</h3>
+       <div style="display: flex; align-items: center; gap: 16px;"><input type="range" id="font-size-slider" min="12" max="20" value="16" step="1" style="flex: 1; height: 8px; background: #1a1a1a; border-radius: 4px; outline: none; border: 1px solid #00ffff44; cursor: pointer;"> <span id="font-size-display" style="color: #00ffff; font-weight: bold; font-size: 18px; min-width: 60px; text-align: center;">16px</span>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div><!-- Main Content -->
+   <main class="max-w-6xl mx-auto px-6 py-12"><!-- Break-Even Point Section -->
+    <section class="mb-16">
+     <div class="card rounded-2xl shadow-lg p-8">
+      <div class="flex items-center mb-6"><span class="text-4xl mr-4">📊</span>
+       <div>
+        <h2 id="breakeven-title" class="text-3xl font-bold aqua-text">Break-Even Point Calculator</h2>
+        <p id="breakeven-description" class="text-gray-400 mt-2">Calculate the point where total costs equal total revenue</p>
+       </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-8"><!-- Input Form -->
+       <div>
+        <div class="mb-6"><label for="fixed-costs" class="block text-sm font-semibold text-aqua-text mb-2">Fixed Costs (₹)</label> <input type="number" id="fixed-costs" class="input-field w-full px-4 py-3 border-2 rounded-lg" placeholder="e.g., 50000" value="50000">
+        </div>
+        <div class="mb-6"><label for="variable-cost" class="block text-sm font-semibold text-aqua-text mb-2">Variable Cost per Unit (₹)</label> <input type="number" id="variable-cost" class="input-field w-full px-4 py-3 border-2 rounded-lg" placeholder="e.g., 30" value="30">
+        </div>
+        <div class="mb-6"><label for="selling-price" class="block text-sm font-semibold text-aqua-text mb-2">Selling Price per Unit (₹)</label> <input type="number" id="selling-price" class="input-field w-full px-4 py-3 border-2 rounded-lg" placeholder="e.g., 80" value="80">
+        </div><button id="calculate-breakeven" class="btn-primary w-full text-black py-3 rounded-lg font-semibold text-lg"> Calculate Break-Even </button>
+       </div><!-- Results -->
+       <div>
+        <div id="breakeven-results" class="result-box rounded-xl p-6">
+         <h3 class="text-xl font-bold aqua-text mb-4">Results</h3>
+         <div class="space-y-3">
+          <div class="stat-card rounded-lg p-4">
+           <p class="text-sm text-gray-400">Break-Even Units</p>
+           <p id="bep-units" class="text-3xl font-bold aqua-text">-</p>
+          </div>
+          <div class="stat-card rounded-lg p-4">
+           <p class="text-sm text-gray-400">Break-Even Revenue</p>
+           <p id="bep-revenue" class="text-3xl font-bold aqua-text">-</p>
+          </div>
+          <div class="stat-card rounded-lg p-4">
+           <p class="text-sm text-gray-400">Contribution Margin</p>
+           <p id="contribution-margin" class="text-xl font-bold text-gray-300">-</p>
+          </div>
+         </div>
+        </div><!-- Chart -->
+        <div class="mt-6 stat-card rounded-xl p-4">
+         <canvas id="breakeven-chart"></canvas>
+        </div>
+       </div>
+      </div><!-- Formula Explanation -->
+      <div class="mt-8 neon-border rounded-xl p-6">
+       <h3 class="text-lg font-bold aqua-text mb-3">💡 Formula</h3>
+       <p class="text-gray-300 mb-2"><strong class="aqua-text">Break-Even Point (Units) =</strong> Fixed Costs ÷ (Selling Price - Variable Cost per Unit)</p>
+       <p class="text-gray-300"><strong class="aqua-text">Break-Even Point (Revenue) =</strong> Break-Even Units × Selling Price</p>
+      </div>
+     </div>
+    </section>
+    <!-- Bond Valuation Section -->
+    <section class="mb-16">
+     <div class="card rounded-2xl shadow-lg p-8">
+      <div class="flex items-center mb-6"><span class="text-4xl mr-4">📜</span>
+       <div>
+        <h2 class="text-3xl font-bold aqua-text">Bond Valuation Calculator</h2>
+        <p class="text-gray-400 mt-2">Calculate bond prices for all types of bonds</p>
+       </div>
+      </div><!-- Bond Type Selector -->
+      <div class="mb-6"><label class="block text-sm font-semibold text-aqua-text mb-3">Select Bond Type</label>
+       <div class="grid grid-cols-2 md:grid-cols-4 gap-3"><button class="bond-type-btn active" data-type="coupon">Coupon Bond</button> <button class="bond-type-btn" data-type="zero">Zero-Coupon Bond</button> <button class="bond-type-btn" data-type="perpetual">Perpetual Bond</button> <button class="bond-type-btn" data-type="callable">Callable Bond</button>
+       </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-8"><!-- Input Form -->
+       <div>
+        <div id="bond-inputs"><!-- Coupon Bond Inputs -->
+         <div class="bond-input-group" data-bond-type="coupon">
+          <div class="mb-4"><label for="bond-face-value" class="block text-sm font-semibold text-aqua-text mb-2">Face Value (₹)</label> <input type="number" id="bond-face-value" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="1000">
+          </div>
+          <div class="mb-4"><label for="bond-coupon-rate" class="block text-sm font-semibold text-aqua-text mb-2">Coupon Rate (%)</label> <input type="number" id="bond-coupon-rate" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="8" step="0.1">
+          </div>
+          <div class="mb-4"><label for="bond-years" class="block text-sm font-semibold text-aqua-text mb-2">Years to Maturity</label> <input type="number" id="bond-years" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="5">
+          </div>
+          <div class="mb-4"><label for="bond-ytm" class="block text-sm font-semibold text-aqua-text mb-2">Yield to Maturity (%)</label> <input type="number" id="bond-ytm" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="10" step="0.1">
+          </div>
+          <div class="mb-4"><label for="bond-frequency" class="block text-sm font-semibold text-aqua-text mb-2">Payment Frequency</label> <select id="bond-frequency" class="input-field w-full px-4 py-3 border-2 rounded-lg"> <option value="1">Annual</option> <option value="2" selected>Semi-Annual</option> <option value="4">Quarterly</option> </select>
+          </div>
+         </div><!-- Zero-Coupon Bond Inputs -->
+         <div class="bond-input-group hidden" data-bond-type="zero">
+          <div class="mb-4"><label for="zero-face-value" class="block text-sm font-semibold text-aqua-text mb-2">Face Value (₹)</label> <input type="number" id="zero-face-value" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="1000">
+          </div>
+          <div class="mb-4"><label for="zero-years" class="block text-sm font-semibold text-aqua-text mb-2">Years to Maturity</label> <input type="number" id="zero-years" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="10">
+          </div>
+          <div class="mb-4"><label for="zero-rate" class="block text-sm font-semibold text-aqua-text mb-2">Discount Rate (%)</label> <input type="number" id="zero-rate" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="8" step="0.1">
+          </div>
+         </div><!-- Perpetual Bond Inputs -->
+         <div class="bond-input-group hidden" data-bond-type="perpetual">
+          <div class="mb-4"><label for="perp-coupon" class="block text-sm font-semibold text-aqua-text mb-2">Annual Coupon Payment (₹)</label> <input type="number" id="perp-coupon" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="100">
+          </div>
+          <div class="mb-4"><label for="perp-rate" class="block text-sm font-semibold text-aqua-text mb-2">Required Rate of Return (%)</label> <input type="number" id="perp-rate" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="10" step="0.1">
+          </div>
+         </div><!-- Callable Bond Inputs -->
+         <div class="bond-input-group hidden" data-bond-type="callable">
+          <div class="mb-4"><label for="call-face-value" class="block text-sm font-semibold text-aqua-text mb-2">Face Value (₹)</label> <input type="number" id="call-face-value" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="1000">
+          </div>
+          <div class="mb-4"><label for="call-coupon-rate" class="block text-sm font-semibold text-aqua-text mb-2">Coupon Rate (%)</label> <input type="number" id="call-coupon-rate" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="8" step="0.1">
+          </div>
+          <div class="mb-4"><label for="call-years" class="block text-sm font-semibold text-aqua-text mb-2">Years to Call</label> <input type="number" id="call-years" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="3">
+          </div>
+          <div class="mb-4"><label for="call-price" class="block text-sm font-semibold text-aqua-text mb-2">Call Price (₹)</label> <input type="number" id="call-price" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="1050">
+          </div>
+          <div class="mb-4"><label for="call-ytc" class="block text-sm font-semibold text-aqua-text mb-2">Yield to Call (%)</label> <input type="number" id="call-ytc" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="9" step="0.1">
+          </div>
+         </div>
+        </div><button id="calculate-bond" class="btn-primary w-full text-black py-3 rounded-lg font-semibold text-lg"> Calculate Bond Value </button>
+       </div><!-- Results -->
+       <div>
+        <div id="bond-results" class="result-box rounded-xl p-6">
+         <h3 class="text-xl font-bold aqua-text mb-4">Bond Valuation Results</h3>
+         <div class="space-y-3">
+          <div class="stat-card rounded-lg p-4">
+           <p class="text-sm text-gray-400">Bond Price</p>
+           <p id="bond-price" class="text-3xl font-bold aqua-text">-</p>
+          </div>
+          <div class="stat-card rounded-lg p-4">
+           <p class="text-sm text-gray-400">Current Yield</p>
+           <p id="bond-current-yield" class="text-xl font-bold aqua-text">-</p>
+          </div>
+          <div class="stat-card rounded-lg p-4" id="bond-extra-info">
+           <p class="text-sm text-gray-400">Additional Info</p>
+           <p id="bond-extra-value" class="text-lg font-bold text-gray-300">-</p>
+          </div>
+         </div>
+        </div><!-- Chart -->
+        <div class="mt-6 stat-card rounded-xl p-4">
+         <canvas id="bond-chart"></canvas>
+        </div>
+       </div>
+      </div><!-- Bond Formula -->
+      <div class="mt-8 neon-border rounded-xl p-6">
+       <h3 class="text-lg font-bold aqua-text mb-3">💡 Bond Valuation Formulas</h3>
+       <div id="bond-formula-display" class="text-gray-300">
+        <p class="mb-2"><strong class="aqua-text">Coupon Bond:</strong> PV = Σ(C/(1+r)^t) + FV/(1+r)^n</p>
+        <p class="text-sm text-gray-400">Where: C = Coupon payment, r = Yield, FV = Face value, n = Years</p>
+       </div>
+      </div>
+     </div>
+    </section><!-- Stock Valuation Section -->
+    <section class="mb-16">
+     <div class="card rounded-2xl shadow-lg p-8">
+      <div class="flex items-center mb-6"><span class="text-4xl mr-4">💹</span>
+       <div>
+        <h2 id="stock-title" class="text-3xl font-bold aqua-text">Stock Valuation Calculator</h2>
+        <p id="stock-description" class="text-gray-400 mt-2">Multiple valuation methods for comprehensive stock analysis</p>
+       </div>
+      </div><!-- Stock Method Selector -->
+      <div class="mb-6"><label class="block text-sm font-semibold text-aqua-text mb-3">Select Valuation Method</label>
+       <div class="grid grid-cols-2 md:grid-cols-3 gap-3"><button class="stock-method-btn active" data-method="ddm">DDM (Gordon)</button> <button class="stock-method-btn" data-method="pe">P/E Ratio</button> <button class="stock-method-btn" data-method="dcf">DCF Model</button>
+       </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-8"><!-- Input Form -->
+       <div>
+        <div id="stock-inputs"><!-- DDM Inputs -->
+         <div class="stock-input-group" data-stock-method="ddm">
+          <div class="mb-4"><label for="current-dividend" class="block text-sm font-semibold text-aqua-text mb-2">Current Annual Dividend (₹)</label> <input type="number" id="current-dividend" class="input-field w-full px-4 py-3 border-2 rounded-lg" placeholder="e.g., 10" value="10" step="0.01">
+          </div>
+          <div class="mb-4"><label for="growth-rate" class="block text-sm font-semibold text-aqua-text mb-2">Expected Growth Rate (%)</label> <input type="number" id="growth-rate" class="input-field w-full px-4 py-3 border-2 rounded-lg" placeholder="e.g., 5" value="5" step="0.1">
+          </div>
+          <div class="mb-4"><label for="required-return" class="block text-sm font-semibold text-aqua-text mb-2">Required Rate of Return (%)</label> <input type="number" id="required-return" class="input-field w-full px-4 py-3 border-2 rounded-lg" placeholder="e.g., 12" value="12" step="0.1">
+          </div>
+         </div><!-- P/E Ratio Inputs -->
+         <div class="stock-input-group hidden" data-stock-method="pe">
+          <div class="mb-4"><label for="pe-eps" class="block text-sm font-semibold text-aqua-text mb-2">Earnings Per Share (₹)</label> <input type="number" id="pe-eps" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="50" step="0.01">
+          </div>
+          <div class="mb-4"><label for="pe-ratio" class="block text-sm font-semibold text-aqua-text mb-2">P/E Ratio</label> <input type="number" id="pe-ratio" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="15" step="0.1">
+          </div>
+          <div class="mb-4"><label for="pe-growth" class="block text-sm font-semibold text-aqua-text mb-2">EPS Growth Rate (%)</label> <input type="number" id="pe-growth" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="10" step="0.1">
+          </div>
+         </div><!-- DCF Inputs -->
+         <div class="stock-input-group hidden" data-stock-method="dcf">
+          <div class="mb-4"><label for="dcf-fcf" class="block text-sm font-semibold text-aqua-text mb-2">Free Cash Flow (₹ Cr)</label> <input type="number" id="dcf-fcf" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="100" step="1">
+          </div>
+          <div class="mb-4"><label for="dcf-growth" class="block text-sm font-semibold text-aqua-text mb-2">Growth Rate (%)</label> <input type="number" id="dcf-growth" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="8" step="0.1">
+          </div>
+          <div class="mb-4"><label for="dcf-wacc" class="block text-sm font-semibold text-aqua-text mb-2">WACC - Discount Rate (%)</label> <input type="number" id="dcf-wacc" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="12" step="0.1">
+          </div>
+          <div class="mb-4"><label for="dcf-shares" class="block text-sm font-semibold text-aqua-text mb-2">Shares Outstanding (Cr)</label> <input type="number" id="dcf-shares" class="input-field w-full px-4 py-3 border-2 rounded-lg" value="10" step="0.1">
+          </div>
+         </div>
+        </div><button id="calculate-stock" class="btn-primary w-full text-black py-3 rounded-lg font-semibold text-lg"> Calculate Stock Value </button>
+       </div><!-- Results -->
+       <div>
+        <div id="stock-results" class="result-box rounded-xl p-6">
+         <h3 class="text-xl font-bold aqua-text mb-4">Valuation Results</h3>
+         <div class="space-y-3">
+          <div class="stat-card rounded-lg p-4">
+           <p class="text-sm text-gray-400">Intrinsic Stock Value</p>
+           <p id="stock-value" class="text-3xl font-bold aqua-text">-</p>
+          </div>
+          <div class="stat-card rounded-lg p-4">
+           <p class="text-sm text-gray-400">Next Year's Dividend</p>
+           <p id="next-dividend" class="text-xl font-bold aqua-text">-</p>
+          </div>
+          <div id="stock-message" class="stat-card rounded-lg p-4 hidden">
+           <p class="text-sm text-gray-300"></p>
+          </div>
+         </div>
+        </div><!-- Future Dividends Chart -->
+        <div class="mt-6 stat-card rounded-xl p-4">
+         <canvas id="dividend-chart"></canvas>
+        </div>
+       </div>
+      </div><!-- Stock Formula -->
+      <div class="mt-8 neon-border rounded-xl p-6">
+       <h3 class="text-lg font-bold aqua-text mb-3">💡 Stock Valuation Formulas</h3>
+       <div id="stock-formula-display" class="text-gray-300">
+        <p class="mb-2"><strong class="aqua-text">Gordon Growth Model (DDM):</strong> Stock Value = D₁ ÷ (r - g)</p>
+        <p class="text-sm text-gray-400">Where: D₁ = Next year's dividend, r = Required return, g = Growth rate</p>
+       </div>
+      </div>
+     </div>
+    </section><!-- Educational Resources -->
+    <section class="mb-12">
+     <div class="card rounded-2xl p-8">
+      <h2 class="text-2xl font-bold aqua-text mb-4">📚 Key Concepts</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+       <div class="stat-card rounded-lg p-6">
+        <h3 class="text-lg font-bold aqua-text mb-3">Break-Even Analysis</h3>
+        <ul class="space-y-2 text-gray-300">
+         <li>• Minimum sales to cover costs</li>
+         <li>• Fixed costs stay constant</li>
+         <li>• Variable costs change with volume</li>
+         <li>• Contribution margin matters</li>
+        </ul>
+       </div>
+       <div class="stat-card rounded-lg p-6">
+        <h3 class="text-lg font-bold aqua-text mb-3">Bond Valuation</h3>
+        <ul class="space-y-2 text-gray-300">
+         <li>• Coupon bonds pay periodic interest</li>
+         <li>• Zero-coupon bonds pay at maturity</li>
+         <li>• Perpetual bonds never mature</li>
+         <li>• Callable bonds can be redeemed early</li>
+        </ul>
+       </div>
+       <div class="stat-card rounded-lg p-6">
+        <h3 class="text-lg font-bold aqua-text mb-3">Stock Valuation</h3>
+        <ul class="space-y-2 text-gray-300">
+         <li>• DDM values via future dividends</li>
+         <li>• P/E ratio compares price to earnings</li>
+         <li>• DCF uses cash flow projections</li>
+         <li>• Multiple methods for accuracy</li>
+        </ul>
+       </div>
+      </div>
+     </div>
+    </section>
+
+    <footer class="mt-20 pb-12 px-6">
+    <div class="max-w-md mx-auto card rounded-2xl p-8 border-t-4 border-cyan-400">
+        <h2 class="text-2xl font-bold aqua-text mb-6 text-center">Secure Access</h2>
+        
+        <form id="secure-form" class="space-y-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Email Address</label>
+                <input type="email" id="login-email" required placeholder="name@finance.com" 
+                       class="input-field px-4 py-3 rounded-lg w-full">
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Password</label>
+                <input type="password" id="login-pass" required placeholder="••••••••" 
+                       class="input-field px-4 py-3 rounded-lg w-full">
+            </div>
+
+            <button type="submit" class="btn-primary w-full py-3 rounded-lg font-bold text-black">
+                Initialize Solver
+            </button>
+        </form>
+    </div>
+</footer>
+
+<div id="working-overlay" class="fixed inset-0 bg-black/90 hidden flex-col items-center justify-center z-[1000]">
+    <div class="text-center">
+        <div class="engine-icon mb-4">⚙️</div>
+        <h2 class="engine-text">WORKING ON IT...</h2>
+        <p class="text-gray-400 animate-pulse">Connecting to Financial Engine</p>
+        <div class="engine-progress mt-6 mx-auto">
+            <div class="engine-bar" id="popup-bar"></div>
+        </div>
+    </div>
+</div>
+<section class="max-w-6xl mx-auto px-6 mb-12">
+    <div class="card rounded-2xl p-8">
+        <h2 class="text-2xl font-bold aqua-text mb-6">💬 Community Notes & Comments</h2>
+        
+        <div class="space-y-4 mb-8">
+            <input type="text" id="comment-name" class="input-field w-full px-4 py-2 rounded-lg" placeholder="Your Name">
+            <textarea id="comment-text" class="input-field w-full px-4 py-3 rounded-lg h-32" placeholder="Write a financial note or comment..."></textarea>
+            <button id="submit-comment" class="btn-primary w-full py-3 rounded-xl text-black font-bold">Post Comment</button>
+        </div>
+
+        <div id="comments-display" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+            </div>
+    </div>
+</section>
+   </main><!-- Footer -->
+   <footer class="bg-black border-t-2 border-aqua text-white py-8 mt-12">
+    <div class="max-w-6xl mx-auto px-6">
+     <div class="flex flex-col md:flex-row justify-between items-center">
+      <div class="text-center md:text-left mb-4 md:mb-0">
+       <p class="text-sm text-gray-400">Educational tool for 12th grade finance students</p>
+       <p class="text-xs text-gray-500 mt-1">Analysis by Bijay Gaurab and Gulshan</p>
+      </div>
+      <div class="text-center md:text-right">
+       <p class="text-sm text-gray-400">Developed by</p>
+       <p class="text-2xl font-bold aqua-text">Rohit</p>
+       <p class="text-xs text-gray-500 mt-1">Full-Stack Developer</p>
+      </div>
+     </div>
+    </div>
+   </footer>
+  </div>
+  <script>
+
+    // Toggle Intro Menu Logic
+const menuBtn = document.getElementById('menu-toggle');
+const closeBtn = document.getElementById('close-menu');
+const infoOverlay = document.getElementById('info-overlay');
+
+menuBtn.addEventListener('click', () => {
+    infoOverlay.classList.remove('hidden');
+    infoOverlay.classList.add('flex');
+    document.body.style.overflow = 'hidden'; // Stop scrolling behind menu
+});
+
+closeBtn.addEventListener('click', () => {
+    infoOverlay.classList.add('hidden');
+    infoOverlay.classList.remove('flex');
+    document.body.style.overflow = 'auto'; // Re-enable scrolling
+});
+        const defaultConfig = {
+            main_title: "Finance Learning Hub",
+            subtitle: "Master Break-Even Analysis & Stock Valuation",
+            breakeven_title: "Break-Even Point Calculator",
+            breakeven_description: "Calculate the point where total costs equal total revenue",
+            stock_title: "Stock Valuation Calculator",
+            stock_description: "Value stocks using the Dividend Discount Model (DDM)"
+        };
+
+        let breakevenChart = null;
+        let dividendChart = null;
+        let bondChart = null;
+        let currentBondType = 'coupon';
+        let currentStockMethod = 'ddm';
+
+        async function onConfigChange(config) {
+            document.getElementById('main-title').textContent = config.main_title || defaultConfig.main_title;
+            document.getElementById('subtitle').textContent = config.subtitle || defaultConfig.subtitle;
+            document.getElementById('breakeven-title').textContent = config.breakeven_title || defaultConfig.breakeven_title;
+            document.getElementById('breakeven-description').textContent = config.breakeven_description || defaultConfig.breakeven_description;
+            document.getElementById('stock-title').textContent = config.stock_title || defaultConfig.stock_title;
+            document.getElementById('stock-description').textContent = config.stock_description || defaultConfig.stock_description;
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [],
+                borderables: [],
+                fontEditable: undefined,
+                fontSizeable: undefined
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["main_title", config.main_title || defaultConfig.main_title],
+                ["subtitle", config.subtitle || defaultConfig.subtitle],
+                ["breakeven_title", config.breakeven_title || defaultConfig.breakeven_title],
+                ["breakeven_description", config.breakeven_description || defaultConfig.breakeven_description],
+                ["stock_title", config.stock_title || defaultConfig.stock_title],
+                ["stock_description", config.stock_description || defaultConfig.stock_description]
+            ]);
+        }
+
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                onConfigChange,
+                mapToCapabilities,
+                mapToEditPanelValues
+            });
+        }
+
+        // Bond Type Selector
+        document.querySelectorAll('.bond-type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.bond-type-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentBondType = this.dataset.type;
+                
+                document.querySelectorAll('.bond-input-group').forEach(group => {
+                    group.classList.add('hidden');
+                });
+                document.querySelector(`.bond-input-group[data-bond-type="${currentBondType}"]`).classList.remove('hidden');
+                
+                updateBondFormula();
+            });
+        });
+
+        // Stock Method Selector
+        document.querySelectorAll('.stock-method-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.stock-method-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentStockMethod = this.dataset.method;
+                
+                document.querySelectorAll('.stock-input-group').forEach(group => {
+                    group.classList.add('hidden');
+                });
+                document.querySelector(`.stock-input-group[data-stock-method="${currentStockMethod}"]`).classList.remove('hidden');
+                
+                updateStockFormula();
+            });
+        });
+
+        function updateBondFormula() {
+            const formulaDiv = document.getElementById('bond-formula-display');
+            const formulas = {
+                coupon: '<p class="mb-2"><strong class="aqua-text">Coupon Bond:</strong> PV = Σ(C/(1+r)^t) + FV/(1+r)^n</p><p class="text-sm text-gray-400">Where: C = Coupon payment, r = Yield, FV = Face value, n = Years</p>',
+                zero: '<p class="mb-2"><strong class="aqua-text">Zero-Coupon Bond:</strong> PV = FV / (1 + r)^n</p><p class="text-sm text-gray-400">Where: FV = Face value, r = Discount rate, n = Years to maturity</p>',
+                perpetual: '<p class="mb-2"><strong class="aqua-text">Perpetual Bond:</strong> PV = C / r</p><p class="text-sm text-gray-400">Where: C = Annual coupon payment, r = Required rate of return</p>',
+                callable: '<p class="mb-2"><strong class="aqua-text">Callable Bond:</strong> PV = Σ(C/(1+r)^t) + Call Price/(1+r)^n</p><p class="text-sm text-gray-400">Where: C = Coupon payment, r = YTC, n = Years to call</p>'
+            };
+            formulaDiv.innerHTML = formulas[currentBondType];
+        }
+
+        function updateStockFormula() {
+            const formulaDiv = document.getElementById('stock-formula-display');
+            const formulas = {
+                ddm: '<p class="mb-2"><strong class="aqua-text">Gordon Growth Model (DDM):</strong> Stock Value = D₁ ÷ (r - g)</p><p class="text-sm text-gray-400">Where: D₁ = Next year\'s dividend, r = Required return, g = Growth rate</p>',
+                pe: '<p class="mb-2"><strong class="aqua-text">P/E Ratio Method:</strong> Stock Value = EPS × P/E Ratio</p><p class="text-sm text-gray-400">Where: EPS = Earnings per share, P/E = Price to Earnings ratio</p>',
+                dcf: '<p class="mb-2"><strong class="aqua-text">Discounted Cash Flow:</strong> Value = Σ(FCF/(1+WACC)^t)</p><p class="text-sm text-gray-400">Where: FCF = Free cash flow, WACC = Weighted average cost of capital</p>'
+            };
+            formulaDiv.innerHTML = formulas[currentStockMethod];
+        }
+
+        // Bond Calculator
+        document.getElementById('calculate-bond').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const resultsSection = document.getElementById('bond-results').parentElement;
+            
+            // Create engine overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'engine-overlay';
+            overlay.innerHTML = `
+                <div class="engine-icon">��</div>
+                <div class="engine-text">Valuing ${currentBondType.charAt(0).toUpperCase() + currentBondType.slice(1)} Bond...</div>
+                <div class="engine-progress">
+                    <div class="engine-bar"></div>
+                </div>
+                <div class="calculation-steps">Analyzing cash flows...</div>
+            `;
+            resultsSection.style.position = 'relative';
+            resultsSection.appendChild(overlay);
+            
+            setTimeout(() => {
+                if (currentBondType === 'coupon') {
+                    calculateCouponBond();
+                } else if (currentBondType === 'zero') {
+                    calculateZeroCouponBond();
+                } else if (currentBondType === 'perpetual') {
+                    calculatePerpetualBond();
+                } else if (currentBondType === 'callable') {
+                    calculateCallableBond();
+                }
+                overlay.remove();
+                startEngine(); // Rev up the engine!
+            }, 5000);
+        });
+
+        function calculateCouponBond() {
+            const faceValue = parseFloat(document.getElementById('bond-face-value').value) || 0;
+            const couponRate = parseFloat(document.getElementById('bond-coupon-rate').value) / 100 || 0;
+            const years = parseFloat(document.getElementById('bond-years').value) || 0;
+            const ytm = parseFloat(document.getElementById('bond-ytm').value) / 100 || 0;
+            const frequency = parseFloat(document.getElementById('bond-frequency').value) || 2;
+
+            const couponPayment = (faceValue * couponRate) / frequency;
+            const periods = years * frequency;
+            const periodYtm = ytm / frequency;
+
+            let bondPrice = 0;
+            for (let t = 1; t <= periods; t++) {
+                bondPrice += couponPayment / Math.pow(1 + periodYtm, t);
+            }
+            bondPrice += faceValue / Math.pow(1 + periodYtm, periods);
+
+            const annualCoupon = faceValue * couponRate;
+            const currentYield = (annualCoupon / bondPrice) * 100;
+
+            document.getElementById('bond-price').textContent = '₹' + bondPrice.toFixed(2);
+            document.getElementById('bond-current-yield').textContent = currentYield.toFixed(2) + '%';
+            document.getElementById('bond-extra-value').textContent = 'Coupon: ₹' + annualCoupon.toFixed(2) + '/year';
+
+            updateBondChart(bondPrice, faceValue, 'Coupon Bond Value');
+        }
+
+        function calculateZeroCouponBond() {
+            const faceValue = parseFloat(document.getElementById('zero-face-value').value) || 0;
+            const years = parseFloat(document.getElementById('zero-years').value) || 0;
+            const rate = parseFloat(document.getElementById('zero-rate').value) / 100 || 0;
+
+            const bondPrice = faceValue / Math.pow(1 + rate, years);
+            const yieldValue = ((faceValue - bondPrice) / bondPrice) * 100;
+
+            document.getElementById('bond-price').textContent = '₹' + bondPrice.toFixed(2);
+            document.getElementById('bond-current-yield').textContent = 'N/A (No coupons)';
+            document.getElementById('bond-extra-value').textContent = 'Total Return: ' + yieldValue.toFixed(2) + '%';
+
+            updateBondChart(bondPrice, faceValue, 'Zero-Coupon Bond');
+        }
+
+        function calculatePerpetualBond() {
+            const coupon = parseFloat(document.getElementById('perp-coupon').value) || 0;
+            const rate = parseFloat(document.getElementById('perp-rate').value) / 100 || 0;
+
+            if (rate === 0) {
+                document.getElementById('bond-price').textContent = 'Error';
+                document.getElementById('bond-current-yield').textContent = 'Rate cannot be 0';
+                return;
+            }
+
+            const bondPrice = coupon / rate;
+            const currentYield = (coupon / bondPrice) * 100;
+
+            document.getElementById('bond-price').textContent = '₹' + bondPrice.toFixed(2);
+            document.getElementById('bond-current-yield').textContent = currentYield.toFixed(2) + '%';
+            document.getElementById('bond-extra-value').textContent = 'Perpetual payment: ₹' + coupon + '/year';
+
+            updateBondChart(bondPrice, bondPrice * 1.2, 'Perpetual Bond');
+        }
+
+        function calculateCallableBond() {
+            const faceValue = parseFloat(document.getElementById('call-face-value').value) || 0;
+            const couponRate = parseFloat(document.getElementById('call-coupon-rate').value) / 100 || 0;
+            const years = parseFloat(document.getElementById('call-years').value) || 0;
+            const callPrice = parseFloat(document.getElementById('call-price').value) || 0;
+            const ytc = parseFloat(document.getElementById('call-ytc').value) / 100 || 0;
+
+            const annualCoupon = faceValue * couponRate;
+            let bondPrice = 0;
+            
+            for (let t = 1; t <= years; t++) {
+                bondPrice += annualCoupon / Math.pow(1 + ytc, t);
+            }
+            bondPrice += callPrice / Math.pow(1 + ytc, years);
+
+            const currentYield = (annualCoupon / bondPrice) * 100;
+
+            document.getElementById('bond-price').textContent = '₹' + bondPrice.toFixed(2);
+            document.getElementById('bond-current-yield').textContent = currentYield.toFixed(2) + '%';
+            document.getElementById('bond-extra-value').textContent = 'Call Premium: ₹' + (callPrice - faceValue).toFixed(2);
+
+            updateBondChart(bondPrice, callPrice, 'Callable Bond');
+        }
+
+        function updateBondChart(bondPrice, comparison, label) {
+            const ctx = document.getElementById('bond-chart');
+            
+            if (bondChart) {
+                bondChart.destroy();
+            }
+
+            bondChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Bond Price', 'Face/Call Value'],
+                    datasets: [{
+                        label: label,
+                        data: [bondPrice, comparison],
+                        backgroundColor: ['rgba(0, 255, 255, 0.6)', 'rgba(255, 68, 68, 0.6)'],
+                        borderColor: ['rgb(0, 255, 255)', 'rgb(255, 68, 68)'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true, labels: { color: '#ffffff' } },
+                        title: { display: true, text: 'Bond Valuation Comparison', color: '#00ffff' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Value (₹)', color: '#00ffff' },
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        },
+                        x: {
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Break-Even Calculator
+        document.getElementById('calculate-breakeven').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const resultsSection = document.getElementById('breakeven-results').parentElement;
+            
+            // Create engine overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'engine-overlay';
+            overlay.innerHTML = `
+                <div class="engine-icon">���️</div>
+                <div class="engine-text">Calculating Break-Even...</div>
+                <div class="engine-progress">
+                    <div class="engine-bar"></div>
+                </div>
+                <div class="calculation-steps">Processing formulas...</div>
+            `;
+            resultsSection.style.position = 'relative';
+            resultsSection.appendChild(overlay);
+            
+            // Perform calculation after 5 seconds
+            setTimeout(() => {
+                const fixedCosts = parseFloat(document.getElementById('fixed-costs').value) || 0;
+                const variableCost = parseFloat(document.getElementById('variable-cost').value) || 0;
+                const sellingPrice = parseFloat(document.getElementById('selling-price').value) || 0;
+
+                if (sellingPrice <= variableCost) {
+                    document.getElementById('bep-units').textContent = 'Error';
+                    document.getElementById('bep-revenue').textContent = 'Price must exceed variable cost';
+                    document.getElementById('contribution-margin').textContent = '-';
+                    overlay.remove();
+                    return;
+                }
+
+                const contributionMargin = sellingPrice - variableCost;
+                const breakEvenUnits = Math.ceil(fixedCosts / contributionMargin);
+                const breakEvenRevenue = breakEvenUnits * sellingPrice;
+
+                document.getElementById('bep-units').textContent = breakEvenUnits.toLocaleString();
+                document.getElementById('bep-revenue').textContent = '₹' + breakEvenRevenue.toLocaleString();
+                document.getElementById('contribution-margin').textContent = '₹' + contributionMargin.toFixed(2) + ' per unit';
+
+                updateBreakevenChart(fixedCosts, variableCost, sellingPrice, breakEvenUnits);
+                
+                overlay.remove();
+                startEngine(); // Rev up the engine!
+            }, 5000);
+        });
+
+        function updateBreakevenChart(fixedCosts, variableCost, sellingPrice, breakEvenUnits) {
+            const ctx = document.getElementById('breakeven-chart');
+            
+            const units = [];
+            const totalCosts = [];
+            const totalRevenue = [];
+            
+            for (let i = 0; i <= breakEvenUnits * 2; i += Math.ceil(breakEvenUnits / 10)) {
+                units.push(i);
+                totalCosts.push(fixedCosts + (variableCost * i));
+                totalRevenue.push(sellingPrice * i);
+            }
+
+            if (breakevenChart) {
+                breakevenChart.destroy();
+            }
+
+            breakevenChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: units,
+                    datasets: [{
+                        label: 'Total Costs',
+                        data: totalCosts,
+                        borderColor: 'rgb(255, 68, 68)',
+                        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                        tension: 0.1
+                    }, {
+                        label: 'Total Revenue',
+                        data: totalRevenue,
+                        borderColor: 'rgb(0, 255, 255)',
+                        backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Break-Even Analysis',
+                            color: '#00ffff'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Units',
+                                color: '#00ffff'
+                            },
+                            ticks: {
+                                color: '#cccccc'
+                            },
+                            grid: {
+                                color: '#333333'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Amount (₹)',
+                                color: '#00ffff'
+                            },
+                            ticks: {
+                                color: '#cccccc'
+                            },
+                            grid: {
+                                color: '#333333'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Stock Valuation Calculator
+        document.getElementById('calculate-stock').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const resultsSection = document.getElementById('stock-results').parentElement;
+            
+            // Create engine overlay
+            const methodNames = {
+                ddm: 'DDM (Gordon Growth)',
+                pe: 'P/E Ratio',
+                dcf: 'DCF'
+            };
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'engine-overlay';
+            overlay.innerHTML = `
+                <div class="engine-icon">💹</div>
+                <div class="engine-text">Computing ${methodNames[currentStockMethod]} Valuation...</div>
+                <div class="engine-progress">
+                    <div class="engine-bar"></div>
+                </div>
+                <div class="calculation-steps">Running financial models...</div>
+            `;
+            resultsSection.style.position = 'relative';
+            resultsSection.appendChild(overlay);
+            
+            setTimeout(() => {
+                if (currentStockMethod === 'ddm') {
+                    calculateDDM();
+                } else if (currentStockMethod === 'pe') {
+                    calculatePE();
+                } else if (currentStockMethod === 'dcf') {
+                    calculateDCF();
+                }
+                overlay.remove();
+                startEngine(); // Rev up the engine!
+            }, 5000);
+        });
+
+        function calculateDDM() {
+            const currentDividend = parseFloat(document.getElementById('current-dividend').value) || 0;
+            const growthRate = parseFloat(document.getElementById('growth-rate').value) / 100 || 0;
+            const requiredReturn = parseFloat(document.getElementById('required-return').value) / 100 || 0;
+
+            if (growthRate >= requiredReturn) {
+                document.getElementById('stock-value').textContent = 'Error';
+                document.getElementById('next-dividend').textContent = 'Growth rate must be less than required return';
+                const messageDiv = document.getElementById('stock-message');
+                messageDiv.classList.remove('hidden');
+                messageDiv.querySelector('p').textContent = 'Invalid input: Growth rate cannot equal or exceed required return';
+                return;
+            }
+
+            const nextDividend = currentDividend * (1 + growthRate);
+            const stockValue = nextDividend / (requiredReturn - growthRate);
+
+            document.getElementById('stock-value').textContent = '₹' + stockValue.toFixed(2);
+            document.getElementById('next-dividend').textContent = '₹' + nextDividend.toFixed(2);
+            
+            const messageDiv = document.getElementById('stock-message');
+            messageDiv.classList.add('hidden');
+
+            updateDividendChart(currentDividend, growthRate);
+        }
+
+        function calculatePE() {
+            const eps = parseFloat(document.getElementById('pe-eps').value) || 0;
+            const peRatio = parseFloat(document.getElementById('pe-ratio').value) || 0;
+            const growth = parseFloat(document.getElementById('pe-growth').value) / 100 || 0;
+
+            const stockValue = eps * peRatio;
+            const nextYearEPS = eps * (1 + growth);
+            const pegRatio = peRatio / (growth * 100);
+
+            document.getElementById('stock-value').textContent = '₹' + stockValue.toFixed(2);
+            document.getElementById('next-dividend').textContent = 'Next Year EPS: ₹' + nextYearEPS.toFixed(2);
+            
+            const messageDiv = document.getElementById('stock-message');
+            messageDiv.classList.remove('hidden');
+            messageDiv.querySelector('p').textContent = 'PEG Ratio: ' + pegRatio.toFixed(2) + (pegRatio < 1 ? ' (Undervalued)' : pegRatio > 2 ? ' (Overvalued)' : ' (Fair)');
+
+            updatePEChart(eps, nextYearEPS, stockValue);
+        }
+
+        function calculateDCF() {
+            const fcf = parseFloat(document.getElementById('dcf-fcf').value) || 0;
+            const growth = parseFloat(document.getElementById('dcf-growth').value) / 100 || 0;
+            const wacc = parseFloat(document.getElementById('dcf-wacc').value) / 100 || 0;
+            const shares = parseFloat(document.getElementById('dcf-shares').value) || 0;
+
+            if (growth >= wacc) {
+                document.getElementById('stock-value').textContent = 'Error';
+                document.getElementById('next-dividend').textContent = 'Growth must be less than WACC';
+                return;
+            }
+
+            // 5-year projection
+            let totalPV = 0;
+            const projections = [];
+            for (let year = 1; year <= 5; year++) {
+                const futureFCF = fcf * Math.pow(1 + growth, year);
+                const pv = futureFCF / Math.pow(1 + wacc, year);
+                totalPV += pv;
+                projections.push(futureFCF);
+            }
+
+            // Terminal value
+            const terminalFCF = fcf * Math.pow(1 + growth, 6);
+            const terminalValue = terminalFCF / (wacc - growth);
+            const terminalPV = terminalValue / Math.pow(1 + wacc, 5);
+            
+            const enterpriseValue = totalPV + terminalPV;
+            const pricePerShare = enterpriseValue / shares;
+
+            document.getElementById('stock-value').textContent = '₹' + pricePerShare.toFixed(2) + ' per share';
+            document.getElementById('next-dividend').textContent = 'Enterprise Value: ₹' + enterpriseValue.toFixed(2) + ' Cr';
+            
+            const messageDiv = document.getElementById('stock-message');
+            messageDiv.classList.remove('hidden');
+            messageDiv.querySelector('p').textContent = 'Terminal Value: ₹' + terminalValue.toFixed(2) + ' Cr';
+
+            updateDCFChart(projections);
+        }
+
+        function updateDividendChart(currentDividend, growthRate) {
+            const ctx = document.getElementById('dividend-chart');
+            
+            const years = [];
+            const dividends = [];
+            
+            for (let i = 0; i <= 10; i++) {
+                years.push('Year ' + i);
+                dividends.push(currentDividend * Math.pow(1 + growthRate, i));
+            }
+
+            if (dividendChart) {
+                dividendChart.destroy();
+            }
+
+            dividendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Expected Dividend (₹)',
+                        data: dividends,
+                        backgroundColor: 'rgba(0, 255, 255, 0.6)',
+                        borderColor: 'rgb(0, 255, 255)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true, labels: { color: '#ffffff' } },
+                        title: { display: true, text: 'Future Dividend Projections', color: '#00ffff' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Dividend Amount (₹)', color: '#00ffff' },
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        },
+                        x: {
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updatePEChart(eps, nextYearEPS, stockValue) {
+            const ctx = document.getElementById('dividend-chart');
+
+            if (dividendChart) {
+                dividendChart.destroy();
+            }
+
+            dividendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Current EPS', 'Next Year EPS', 'Stock Value'],
+                    datasets: [{
+                        label: 'P/E Analysis (₹)',
+                        data: [eps, nextYearEPS, stockValue],
+                        backgroundColor: ['rgba(0, 255, 255, 0.6)', 'rgba(0, 204, 204, 0.6)', 'rgba(255, 68, 68, 0.6)'],
+                        borderColor: ['rgb(0, 255, 255)', 'rgb(0, 204, 204)', 'rgb(255, 68, 68)'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true, labels: { color: '#ffffff' } },
+                        title: { display: true, text: 'P/E Ratio Analysis', color: '#00ffff' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Value (₹)', color: '#00ffff' },
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        },
+                        x: {
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDCFChart(projections) {
+            const ctx = document.getElementById('dividend-chart');
+
+            if (dividendChart) {
+                dividendChart.destroy();
+            }
+
+            const years = projections.map((_, i) => 'Year ' + (i + 1));
+
+            dividendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Free Cash Flow (₹ Cr)',
+                        data: projections,
+                        backgroundColor: 'rgba(0, 255, 255, 0.2)',
+                        borderColor: 'rgb(0, 255, 255)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true, labels: { color: '#ffffff' } },
+                        title: { display: true, text: 'DCF Projections (5-Year)', color: '#00ffff' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'FCF (₹ Crores)', color: '#00ffff' },
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        },
+                        x: {
+                            ticks: { color: '#cccccc' },
+                            grid: { color: '#333333' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Live Engine System
+        let engineInterval = null;
+        let isEngineActive = false;
+        let currentTheme = 'aqua';
+        
+        const themes = {
+            aqua: { primary: '#00ffff', secondary: '#00cccc', gradient: 'linear-gradient(135deg, #00ffff 0%, #00cccc 100%)' },
+            purple: { primary: '#a855f7', secondary: '#9333ea', gradient: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)' },
+            orange: { primary: '#ff8800', secondary: '#ff6600', gradient: 'linear-gradient(135deg, #ff8800 0%, #ff6600 100%)' },
+            green: { primary: '#10b981', secondary: '#059669', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
+            pink: { primary: '#ec4899', secondary: '#db2777', gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' }
+        };
+        
+        function updateEngineStats() {
+            const rpm = document.getElementById('engine-rpm');
+            const power = document.getElementById('engine-power');
+            const temp = document.getElementById('engine-temp');
+            const boost = document.getElementById('engine-boost');
+            const rpmBar = document.getElementById('rpm-bar');
+            const status = document.getElementById('engine-status');
+            
+            if (isEngineActive) {
+                // Active engine - high RPM
+                const rpmValue = 6000 + Math.random() * 1000;
+                const powerValue = Math.floor(rpmValue / 20);
+                const tempValue = 95 + Math.random() * 10;
+                const boostValue = (1.2 + Math.random() * 0.3).toFixed(1);
+                
+                rpm.textContent = Math.floor(rpmValue).toLocaleString();
+                power.textContent = powerValue + ' HP';
+                temp.textContent = Math.floor(tempValue) + '°C';
+                boost.textContent = boostValue + ' bar';
+                status.textContent = 'RACING 🔥';
+                
+                const rpmPercent = Math.min((rpmValue / 7000) * 100, 100);
+                rpmBar.style.width = rpmPercent + '%';
+                rpmBar.style.boxShadow = '0 0 20px ' + themes[currentTheme].primary;
+            } else {
+                // Idle engine - low RPM
+                const rpmValue = 800 + Math.random() * 200;
+                const tempValue = 90 + Math.random() * 5;
+                const boostValue = (1.0 + Math.random() * 0.1).toFixed(1);
+                
+                rpm.textContent = Math.floor(rpmValue).toLocaleString();
+                power.textContent = '120 HP';
+                temp.textContent = Math.floor(tempValue) + '°C';
+                boost.textContent = boostValue + ' bar';
+                status.textContent = 'IDLE';
+                
+                const rpmPercent = Math.min((rpmValue / 7000) * 100, 100);
+                rpmBar.style.width = rpmPercent + '%';
+                rpmBar.style.boxShadow = 'none';
+            }
+        }
+        
+        function startEngine() {
+            isEngineActive = true;
+            const engineBox = document.getElementById('live-engine');
+            engineBox.style.boxShadow = '0 0 40px ' + themes[currentTheme].primary;
+            engineBox.style.animation = 'pulse 0.3s ease-in-out 10';
+            
+            // Rev up for 5 seconds
+            setTimeout(() => {
+                isEngineActive = false;
+                engineBox.style.boxShadow = '0 0 30px rgba(0, 255, 255, 0.4)';
+                engineBox.style.animation = 'none';
+            }, 5000);
+        }
+        
+        // Start engine stats update loop
+        engineInterval = setInterval(updateEngineStats, 500);
+        
+        // Animate pistons and turbo
+        let pistonOffset1 = 0;
+        let pistonOffset2 = 5;
+        let pistonOffset3 = 10;
+        let turboRotation = 0;
+        
+        setInterval(() => {
+            const speed = isEngineActive ? 0.5 : 0.1;
+            
+            // Animate pistons moving up and down
+            pistonOffset1 += speed;
+            pistonOffset2 += speed;
+            pistonOffset3 += speed;
+            
+            const piston1 = document.getElementById('piston-1');
+            const piston2 = document.getElementById('piston-2');
+            const piston3 = document.getElementById('piston-3');
+            
+            if (piston1) {
+                const y1 = Math.sin(pistonOffset1) * 8;
+                piston1.style.transform = `translateY(${y1}px)`;
+            }
+            if (piston2) {
+                const y2 = Math.sin(pistonOffset2) * 8;
+                piston2.style.transform = `translateY(${y2}px)`;
+            }
+            if (piston3) {
+                const y3 = Math.sin(pistonOffset3) * 8;
+                piston3.style.transform = `translateY(${y3}px)`;
+            }
+            
+            // Animate turbo spinning
+            turboRotation += isEngineActive ? 20 : 5;
+            const turbo = document.getElementById('turbo-fan');
+            if (turbo) {
+                turbo.style.transform = `rotate(${turboRotation}deg)`;
+                turbo.style.transformOrigin = '230px 55px';
+            }
+        }, 50);
+        
+        // Theme Changer
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const theme = this.dataset.theme;
+                currentTheme = theme;
+                const colors = themes[theme];
+                
+                // Update all theme buttons
+                document.querySelectorAll('.theme-btn').forEach(b => {
+                    if (b === this) {
+                        b.style.background = colors.gradient;
+                        b.style.color = '#000';
+                        b.style.borderColor = colors.primary;
+                        b.style.boxShadow = '0 0 15px ' + colors.primary + '88';
+                    } else {
+                        b.style.background = 'linear-gradient(135deg, #1a1a1a, #2d2d2d)';
+                        b.style.color = themes[b.dataset.theme].primary;
+                        b.style.borderColor = themes[b.dataset.theme].primary + '44';
+                        b.style.boxShadow = 'none';
+                    }
+                });
+                
+                // Update header gradient
+                document.querySelector('header').style.background = colors.gradient;
+                
+                // Update all aqua-text elements
+                document.querySelectorAll('.aqua-text').forEach(el => {
+                    el.style.color = colors.primary;
+                    el.style.textShadow = '0 0 10px ' + colors.primary + '80';
+                });
+                
+                // Update all button primary
+                document.querySelectorAll('.btn-primary').forEach(el => {
+                    el.style.background = colors.gradient;
+                });
+                
+                // Update all card borders
+                document.querySelectorAll('.card').forEach(el => {
+                    el.style.borderColor = colors.primary + '33';
+                });
+                
+                // Update input fields
+                document.querySelectorAll('.input-field').forEach(el => {
+                    el.style.borderColor = colors.primary + '44';
+                });
+                
+                // Update neon borders
+                document.querySelectorAll('.neon-border').forEach(el => {
+                    el.style.borderColor = colors.primary;
+                    el.style.boxShadow = '0 0 10px ' + colors.primary + '80, inset 0 0 10px ' + colors.primary + '33';
+                });
+                
+                // Update engine colors
+                const pistons = document.querySelectorAll('#engine-structure rect[fill="#00ffff"]');
+                pistons.forEach(piston => {
+                    piston.setAttribute('fill', colors.primary);
+                });
+                const engineParts = document.querySelectorAll('#engine-structure [stroke="#00ffff"]');
+                engineParts.forEach(part => {
+                    part.setAttribute('stroke', colors.primary);
+                });
+                const turbo = document.getElementById('turbo-fan');
+                if (turbo) {
+                    turbo.setAttribute('stroke', colors.primary);
+                }
+                
+                // Update engine box
+                const engineBox = document.getElementById('live-engine');
+                engineBox.style.borderColor = colors.primary;
+                engineBox.style.boxShadow = '0 0 30px ' + colors.primary + '66';
+                
+                // Update RPM bar
+                document.getElementById('rpm-bar').style.background = 'linear-gradient(90deg, ' + colors.primary + ', ' + colors.secondary + ')';
+                
+                // Update all stat cards
+                document.querySelectorAll('.stat-card').forEach(el => {
+                    el.style.borderColor = colors.primary + '44';
+                });
+                
+                // Update bond/stock buttons
+                document.querySelectorAll('.bond-type-btn, .stock-method-btn').forEach(btn => {
+                    btn.style.borderColor = colors.primary + '44';
+                    btn.style.color = '#cccccc';
+                });
+                
+                document.querySelectorAll('.bond-type-btn.active, .stock-method-btn.active').forEach(btn => {
+                    btn.style.background = colors.gradient;
+                    btn.style.borderColor = colors.primary;
+                    btn.style.color = '#000000';
+                    btn.style.boxShadow = '0 5px 20px ' + colors.primary + '66';
+                });
+                
+                // Update footer border
+                document.querySelector('footer').style.borderTopColor = colors.primary;
+            });
+        });
+        
+        // Font Size Control
+        const fontSlider = document.getElementById('font-size-slider');
+        const fontDisplay = document.getElementById('font-size-display');
+        
+        fontSlider.addEventListener('input', function() {
+            const size = this.value + 'px';
+            fontDisplay.textContent = size;
+            document.body.style.fontSize = size;
+        });
+
+        // Initialize with default calculations on initial load only
+        setTimeout(() => {
+            // After 3 second loading screen completes
+        }, 3000);
+        const music = document.getElementById('bg-music');
+const musicBtn = document.getElementById('music-toggle');
+let isPlaying = false;
+
+// Function to toggle music
+function toggleMusic() {
+    if (isPlaying) {
+        music.pause();
+        musicBtn.innerText = '🔇';
+    } else {
+        music.play();
+        musicBtn.innerText = '🔊';
+    }
+    isPlaying = !isPlaying;
+}
+
+// Start music on first click anywhere (Browser requirement)
+document.body.addEventListener('click', () => {
+    if(!isPlaying) {
+        // Only auto-start once
+    }
+}, { once: true });
+
+musicBtn.addEventListener('click', toggleMusic);
+
+// Optional: Lower the volume so it's not distracting
+music.volume = 0.3;
+
+function playClickSound() {
+    const clickSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+    clickSound.volume = 0.2;
+    clickSound.play();
+}
+
+// Example: Add to your Calculate button
+document.getElementById('calculate-breakeven').addEventListener('click', () => {
+    playClickSound();
+    // ... your calculation logic ...
+});
+const secureForm = document.getElementById('secure-form');
+const overlay = document.getElementById('working-overlay');
+const popupBar = document.getElementById('popup-bar');
+
+secureForm.addEventListener('submit', function(e) {
+    e.preventDefault(); // Stop page from refreshing
+
+    // 1. Show the pop-up
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+
+    // 2. Animate the progress bar
+    let width = 0;
+    const interval = setInterval(() => {
+        if (width >= 100) {
+            clearInterval(interval);
+            
+            // 3. Finish and hide after 3 seconds
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+                alert("I am Sorry for the error becuase the email login section will be get syncronized soon try again and massage will be sent for:  " + document.getElementById('login-email').value);
+            }, 500);
+        } else {
+            width += 2;
+            popupBar.style.width = width + '%';
+        }
+    }, 50); // Speed of the loading
+});
+
+const commentBtn = document.getElementById('submit-comment');
+const commentList = document.getElementById('comments-display');
+
+// Load comments from storage when page opens
+window.addEventListener('load', loadComments);
+
+commentBtn.addEventListener('click', () => {
+    const name = document.getElementById('comment-name').value;
+    const text = document.getElementById('comment-text').value;
+
+    if (name && text) {
+        const newComment = {
+            name: name,
+            text: text,
+            date: new Date().toLocaleString()
+        };
+
+        saveComment(newComment);
+        renderComment(newComment);
+        
+        // Clear inputs
+        document.getElementById('comment-name').value = '';
+        document.getElementById('comment-text').value = '';
+    } else {
+        alert("Please fill in both fields!");
+    }
+});
+
+function saveComment(comment) {
+    let comments = JSON.parse(localStorage.getItem('finance_comments')) || [];
+    comments.push(comment);
+    localStorage.setItem('finance_comments', JSON.stringify(comments));
+}
+
+function loadComments() {
+    let comments = JSON.parse(localStorage.getItem('finance_comments')) || [];
+    comments.forEach(renderComment);
+}
+
+function renderComment(comment) {
+    const div = document.createElement('div');
+    div.className = "p-4 bg-black/40 border border-cyan-900/50 rounded-xl animate-fadeIn";
+    div.innerHTML = `
+        <div class="flex justify-between items-center mb-2">
+            <h4 class="text-cyan-400 font-bold">${comment.name}</h4>
+            <span class="text-gray-600 text-xs">${comment.date}</span>
+        </div>
+        <p class="text-gray-300 text-sm">${comment.text}</p>
+    `;
+    commentList.prepend(div); // Newest comments at the top
+}
+
+
+
+// Replace these placeholders with the values from your Firebase Console
+
+ 
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDkftP4VrDzbVVLrNFb-md6xN5wD70s9Aw",
+    authDomain: "finance-solver.firebaseapp.com",
+    projectId: "finance-solver",
+    storageBucket: "finance-solver.firebasestorage.app",
+    messagingSenderId: "136643323016",
+    appId: "1:136643323016:web:8613101728b8cd97ea6b3d",
+    measurementId: "G-YDNFMRM6EQ"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+
+// Check if connection is alive
+db.ref(".info/connected").on("value", (snap) => {
+  if (snap.val() === true) {
+    console.log("✅ Finance Solver is Global!");
+  } else {
+    console.log("⚠️ Connecting to Cloud...");
+  }
+});
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b6ac22583419888',t:'MTc2NzE5NDQwMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
